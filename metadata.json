@@ -1,0 +1,7 @@
+{
+  "name": "Saksham",
+  "description": "Privacy-first shelter matching, placement, and transport coordination application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
