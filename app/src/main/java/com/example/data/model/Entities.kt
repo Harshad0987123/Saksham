@@ -76,7 +76,12 @@ data class TransportProvider(
     val vehiclePlate: String,
     @ColumnInfo(name = "eta_minutes")
     val etaMinutes: Int = 12
-)
+) {
+    val vehicleId: Long get() = id
+    val vehicleName: String get() = name
+    val capacity: Int get() = passengerCapacity
+    val currentStatus: String get() = status
+}
 
 /**
  * Placement Request entity matching Table 3 of Saksham PRD
@@ -103,20 +108,30 @@ data class PlacementRequest(
     val wheelchairRequired: Boolean = false,
     @ColumnInfo(name = "transport_required")
     val transportRequired: Boolean = false,
+    @ColumnInfo(name = "pickup_area")
+    val pickupArea: String = "Central District",
     @ColumnInfo(name = "needs_children")
     val needsChildren: Boolean = false,
     @ColumnInfo(name = "needs_wheelchair")
     val needsWheelchair: Boolean = false,
     @ColumnInfo(name = "service_type")
     val serviceType: String = "Safe Shelter",
-    val status: String = "REQUEST_SENT", // REQUEST_SENT, PENDING, CONFIRMED, REJECTED, TRANSPORT_REQUESTED, TRANSPORT_ASSIGNED, ON_THE_WAY, COMPLETED
+    val status: String = "REQUESTED", // REQUESTED, PENDING, APPROVED, REJECTED, TRANSPORT_REQUESTED, COMPLETED
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "approved_at")
+    val approvedAt: Long? = null,
+    @ColumnInfo(name = "rejected_at")
+    val rejectedAt: Long? = null,
+    @ColumnInfo(name = "rejection_reason")
+    val rejectionReason: String? = null,
     @ColumnInfo(name = "confirmation_code")
     val confirmationCode: String = "",
     @ColumnInfo(name = "intake_notes")
     val intakeNotes: String = ""
-)
+) {
+    val userId: String get() = sessionId
+}
 
 /**
  * Transport Request entity matching Table 4 of Saksham PRD
@@ -127,6 +142,8 @@ data class TransportRequest(
     val id: Long = 0,
     @ColumnInfo(name = "placement_request_id")
     val placementRequestId: Long,
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
     @ColumnInfo(name = "adults")
     val adults: Int = 1,
     @ColumnInfo(name = "children")
@@ -139,6 +156,10 @@ data class TransportRequest(
     val providerId: Long? = null,
     @ColumnInfo(name = "provider_name")
     val providerName: String? = null,
+    @ColumnInfo(name = "assigned_vehicle_id")
+    val assignedVehicleId: Long? = null,
+    @ColumnInfo(name = "assigned_vehicle_name")
+    val assignedVehicleName: String? = null,
     @ColumnInfo(name = "vehicle_type")
     val vehicleType: String? = null,
     @ColumnInfo(name = "driver_name")
@@ -147,15 +168,23 @@ data class TransportRequest(
     val vehiclePlate: String? = null,
     @ColumnInfo(name = "wheelchair_required")
     val wheelchairRequired: Boolean = false,
-    val status: String = "REQUESTED", // REQUESTED, ASSIGNED, ON_THE_WAY, COMPLETED
-    val eta: Int = 12,
+    val status: String = "REQUESTED", // REQUESTED, ASSIGNED, ON_THE_WAY, ARRIVED, DECLINED, COMPLETED
+    val eta: Int = 15,
     @ColumnInfo(name = "pickup_area")
     val pickupArea: String = "Current General Area",
+    @ColumnInfo(name = "destination_shelter_id")
+    val destinationShelterId: Long = 1,
     @ColumnInfo(name = "destination_shelter_name")
     val destinationShelterName: String,
     @ColumnInfo(name = "created_at")
-    val createdAt: Long = System.currentTimeMillis()
-)
+    val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "assigned_at")
+    val assignedAt: Long? = null,
+    @ColumnInfo(name = "rejection_reason")
+    val rejectionReason: String? = null
+) {
+    val totalPeople: Int get() = passengers
+}
 
 /**
  * Availability Log entity matching Table 5 of Saksham PRD
@@ -208,6 +237,9 @@ fun formatAdults(count: Int): String =
 
 fun formatChildren(count: Int): String =
     if (count == 1) "1 child" else "$count children"
+
+fun formatPassengerBreakdown(adults: Int, children: Int): String =
+    if (children > 0) "${formatAdults(adults)} + ${formatChildren(children)}" else formatAdults(adults)
 
 fun formatPeopleCount(total: Int, adults: Int, children: Int): String =
     "${formatTotalPeople(total)} (${formatAdults(adults)}, ${formatChildren(children)})"

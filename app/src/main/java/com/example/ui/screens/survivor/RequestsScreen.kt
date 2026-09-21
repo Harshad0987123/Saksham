@@ -164,19 +164,19 @@ fun RequestsScreen(
                     // Find associated transport request for this placement
                     val linkedTransport = transportRequests.find { it.placementRequestId == req.id }
 
-                    val isConfirmed = req.status == "CONFIRMED" ||
-                            req.status == "TRANSPORT_REQUESTED" ||
-                            req.status == "TRANSPORT_ASSIGNED" ||
-                            req.status == "ON_THE_WAY" ||
-                            req.status == "COMPLETED"
+                    val isConfirmed = req.status in listOf(
+                        "APPROVED", "CONFIRMED",
+                        "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED",
+                        "ON_THE_WAY", "ARRIVED", "COMPLETED"
+                    )
 
                     val statusLabel = when (req.status) {
-                        "CONFIRMED" -> "Placement Confirmed"
+                        "APPROVED", "CONFIRMED" -> "✓ Placement Approved"
                         "TRANSPORT_REQUESTED" -> "Transport Requested"
                         "TRANSPORT_ASSIGNED" -> "Transport Assigned"
-                        "ON_THE_WAY" -> "Transport On The Way"
+                        "ON_THE_WAY", "ARRIVED" -> "Transport On The Way"
                         "COMPLETED" -> "Placement Complete"
-                        "REJECTED" -> "Unavailable"
+                        "REJECTED" -> "Declined"
                         else -> "Shelter Reviewing"
                     }
 
@@ -321,8 +321,9 @@ fun RequestsScreen(
 
                                 val transportStatusLabel = when (linkedTransport.status) {
                                     "ASSIGNED" -> "Vehicle Assigned"
-                                    "ON_THE_WAY" -> "On The Way"
-                                    "COMPLETED" -> "Arrived"
+                                    "ON_THE_WAY", "ARRIVED" -> "On The Way"
+                                    "COMPLETED" -> "Arrived at Shelter"
+                                    "DECLINED" -> "Transport Declined"
                                     else -> "Transport Requested"
                                 }
                                 val transportStatusColor = when (linkedTransport.status) {

@@ -241,23 +241,26 @@ fun HomeScreen(
 
         if (activeRequest != null) {
             val statusLabel = when (activeRequest.status) {
-                "CONFIRMED" -> "Placement Confirmed"
+                "APPROVED", "CONFIRMED" -> "✓ Placement Approved"
+                "REJECTED" -> "✕ Request Declined"
                 "TRANSPORT_REQUESTED" -> "Transport Requested"
                 "TRANSPORT_ASSIGNED" -> "Transport Assigned"
-                "ON_THE_WAY" -> "Transport On The Way"
+                "ON_THE_WAY", "ARRIVED" -> "Transport On The Way"
                 "COMPLETED" -> "Placement & Transport Complete"
-                else -> "Shelter Reviewing"
+                else -> "Shelter Reviewing..."
             }
 
             val statusColor = when (activeRequest.status) {
-                "CONFIRMED" -> FreshGreen
-                "REQUEST_SENT" -> WarningAmber
+                "APPROVED", "CONFIRMED", "COMPLETED" -> FreshGreen
+                "REJECTED" -> androidx.compose.ui.graphics.Color(0xFFE53935)
+                "REQUESTED", "REQUEST_SENT", "PENDING" -> WarningAmber
                 else -> TealPrimary
             }
 
             val statusContainerColor = when (activeRequest.status) {
-                "CONFIRMED" -> FreshGreenContainer
-                "REQUEST_SENT" -> WarningAmberContainer
+                "APPROVED", "CONFIRMED", "COMPLETED" -> FreshGreenContainer
+                "REJECTED" -> androidx.compose.ui.graphics.Color(0xFFFFCDD2)
+                "REQUESTED", "REQUEST_SENT", "PENDING" -> WarningAmberContainer
                 else -> TealContainer
             }
 

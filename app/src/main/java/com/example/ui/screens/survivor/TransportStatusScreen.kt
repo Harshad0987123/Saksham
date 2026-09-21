@@ -78,9 +78,9 @@ fun TransportStatusScreen(
     }
 
     val scrollState = rememberScrollState()
-    val isAssigned = transportRequest.status in listOf("ASSIGNED", "ON_THE_WAY", "COMPLETED")
-    val isOnTheWay = transportRequest.status in listOf("ON_THE_WAY", "COMPLETED")
-    val isCompleted = transportRequest.status == "COMPLETED"
+    val isAssigned = transportRequest.status in listOf("ASSIGNED", "ON_THE_WAY", "ARRIVED", "COMPLETED")
+    val isOnTheWay = transportRequest.status in listOf("ON_THE_WAY", "ARRIVED", "COMPLETED")
+    val isCompleted = transportRequest.status in listOf("ARRIVED", "COMPLETED")
 
     Column(
         modifier = Modifier

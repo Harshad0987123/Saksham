@@ -69,12 +69,24 @@ class SakshamRepository(private val dao: SakshamDao) {
         dao.insertPlacementRequest(request)
     }
 
+    suspend fun approvePlacement(requestId: Long, code: String) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        dao.approvePlacementRequest(requestId, now, code)
+    }
+
     suspend fun confirmPlacementRequest(requestId: Long, code: String) = withContext(Dispatchers.IO) {
-        dao.confirmPlacementRequest(requestId, "CONFIRMED", code)
+        val now = System.currentTimeMillis()
+        dao.approvePlacementRequest(requestId, now, code)
+    }
+
+    suspend fun rejectPlacement(requestId: Long, reason: String) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        dao.rejectPlacementRequest(requestId, now, reason)
     }
 
     suspend fun rejectPlacementRequest(requestId: Long) = withContext(Dispatchers.IO) {
-        dao.updatePlacementRequestStatus(requestId, "REJECTED")
+        val now = System.currentTimeMillis()
+        dao.rejectPlacementRequest(requestId, now, "Shelter currently cannot accommodate this request.")
     }
 
     suspend fun updatePlacementStatus(requestId: Long, status: String) = withContext(Dispatchers.IO) {
@@ -107,7 +119,15 @@ class SakshamRepository(private val dao: SakshamDao) {
     }
 
     suspend fun createTransportRequest(request: TransportRequest): Long = withContext(Dispatchers.IO) {
+        val existing = dao.getTransportRequestByPlacementIdDirect(request.placementRequestId)
+        if (existing != null) {
+            return@withContext existing.id
+        }
         dao.insertTransportRequest(request)
+    }
+
+    suspend fun getTransportRequestByPlacementIdDirect(placementRequestId: Long): TransportRequest? = withContext(Dispatchers.IO) {
+        dao.getTransportRequestByPlacementIdDirect(placementRequestId)
     }
 
     suspend fun assignTransportVehicle(
@@ -116,28 +136,58 @@ class SakshamRepository(private val dao: SakshamDao) {
         provider: TransportProvider,
         eta: Int
     ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
         dao.assignTransportVehicle(
             id = transportId,
             status = "ASSIGNED",
             providerId = provider.id,
             providerName = provider.name,
+            assignedVehicleId = provider.id,
+            assignedVehicleName = provider.name,
             vehicleType = provider.vehicleType,
             driverName = provider.driverName,
             vehiclePlate = provider.vehiclePlate,
             vehicleCapacity = provider.passengerCapacity,
-            eta = eta
+            eta = eta,
+            assignedAt = now
         )
+        // Mark vehicle as not available while assigned
+        dao.updateVehicleAvailability(provider.id, available = false, status = "ASSIGNED")
         // Update placement request status as well
         dao.updatePlacementRequestStatus(placementRequestId, "TRANSPORT_ASSIGNED")
     }
 
-    suspend fun updateTransportStatus(transportId: Long, placementRequestId: Long, status: String) = withContext(Dispatchers.IO) {
+    suspend fun declineTransportRequest(transportId: Long, reason: String) = withContext(Dispatchers.IO) {
+        dao.declineTransportRequest(transportId, reason)
+    }
+
+    suspend fun updateTransportStatus(
+        transportId: Long,
+        placementRequestId: Long,
+        providerId: Long?,
+        status: String
+    ) = withContext(Dispatchers.IO) {
         dao.updateTransportStatus(transportId, status)
         when (status) {
             "ON_THE_WAY" -> dao.updatePlacementRequestStatus(placementRequestId, "ON_THE_WAY")
             "ARRIVED" -> dao.updatePlacementRequestStatus(placementRequestId, "ARRIVED")
-            "COMPLETED" -> dao.updatePlacementRequestStatus(placementRequestId, "COMPLETED")
+            "COMPLETED" -> {
+                dao.updatePlacementRequestStatus(placementRequestId, "COMPLETED")
+                if (providerId != null) {
+                    // Make vehicle available again upon completion
+                    dao.updateVehicleAvailability(providerId, available = true, status = "Available")
+                }
+            }
         }
+    }
+
+    suspend fun updateVehicleAvailability(providerId: Long, available: Boolean) = withContext(Dispatchers.IO) {
+        val statusStr = if (available) "Available" else "Unavailable"
+        dao.updateVehicleAvailability(providerId, available, statusStr)
+    }
+
+    suspend fun updateTransportEta(transportId: Long, eta: Int) = withContext(Dispatchers.IO) {
+        dao.updateTransportEta(transportId, eta)
     }
 
     fun getTransportByPlacementId(placementRequestId: Long): Flow<TransportRequest?> =

@@ -66,6 +66,12 @@ interface SakshamDao {
     @Query("UPDATE placement_requests SET status = :status WHERE id = :id")
     suspend fun updatePlacementRequestStatus(id: Long, status: String)
 
+    @Query("UPDATE placement_requests SET status = 'APPROVED', approved_at = :approvedAt, confirmation_code = :code WHERE id = :id")
+    suspend fun approvePlacementRequest(id: Long, approvedAt: Long, code: String)
+
+    @Query("UPDATE placement_requests SET status = 'REJECTED', rejected_at = :rejectedAt, rejection_reason = :reason WHERE id = :id")
+    suspend fun rejectPlacementRequest(id: Long, rejectedAt: Long, reason: String)
+
     @Query("UPDATE placement_requests SET status = :status, confirmation_code = :code WHERE id = :id")
     suspend fun confirmPlacementRequest(id: Long, status: String, code: String)
 
@@ -85,17 +91,23 @@ interface SakshamDao {
     fun getPlacementRequestsForShelter(shelterId: Long): Flow<List<PlacementRequest>>
 
     // --- TRANSPORT PROVIDERS ---
-    @Query("SELECT * FROM transport_providers ORDER BY eta_minutes ASC")
+    @Query("SELECT * FROM transport_providers ORDER BY passenger_capacity ASC")
     fun getAllTransportProviders(): Flow<List<TransportProvider>>
 
-    @Query("SELECT * FROM transport_providers WHERE wheelchair_accessible = 1 ORDER BY eta_minutes ASC")
+    @Query("SELECT * FROM transport_providers WHERE wheelchair_accessible = 1 ORDER BY passenger_capacity ASC")
     fun getWheelchairTransportProviders(): Flow<List<TransportProvider>>
+
+    @Query("SELECT * FROM transport_providers WHERE id = :id")
+    fun getTransportProviderById(id: Long): Flow<TransportProvider?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransportProviders(providers: List<TransportProvider>)
 
     @Query("SELECT COUNT(*) FROM transport_providers")
     suspend fun getTransportProviderCount(): Int
+
+    @Query("UPDATE transport_providers SET available = :available, status = :status WHERE id = :providerId")
+    suspend fun updateVehicleAvailability(providerId: Long, available: Boolean, status: String)
 
     // --- TRANSPORT REQUESTS ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -106,11 +118,14 @@ interface SakshamDao {
         SET status = :status, 
             provider_id = :providerId, 
             provider_name = :providerName, 
+            assigned_vehicle_id = :assignedVehicleId,
+            assigned_vehicle_name = :assignedVehicleName,
             vehicle_type = :vehicleType, 
             driver_name = :driverName, 
             vehicle_plate = :vehiclePlate, 
             vehicle_capacity = :vehicleCapacity,
-            eta = :eta 
+            eta = :eta,
+            assigned_at = :assignedAt
         WHERE id = :id
     """)
     suspend fun assignTransportVehicle(
@@ -118,18 +133,33 @@ interface SakshamDao {
         status: String,
         providerId: Long,
         providerName: String,
+        assignedVehicleId: Long,
+        assignedVehicleName: String,
         vehicleType: String,
         driverName: String,
         vehiclePlate: String,
         vehicleCapacity: Int,
-        eta: Int
+        eta: Int,
+        assignedAt: Long = System.currentTimeMillis()
     )
 
     @Query("UPDATE transport_requests SET status = :status WHERE id = :id")
     suspend fun updateTransportStatus(id: Long, status: String)
 
+    @Query("UPDATE transport_requests SET status = 'DECLINED', rejection_reason = :reason WHERE id = :id")
+    suspend fun declineTransportRequest(id: Long, reason: String)
+
+    @Query("UPDATE transport_requests SET eta = :eta WHERE id = :id")
+    suspend fun updateTransportEta(id: Long, eta: Int)
+
     @Query("SELECT * FROM transport_requests WHERE placement_request_id = :placementRequestId LIMIT 1")
     fun getTransportByPlacementId(placementRequestId: Long): Flow<TransportRequest?>
+
+    @Query("SELECT * FROM transport_requests WHERE placement_request_id = :placementRequestId LIMIT 1")
+    suspend fun getTransportRequestByPlacementIdDirect(placementRequestId: Long): TransportRequest?
+
+    @Query("SELECT * FROM transport_requests WHERE placement_request_id = :placementRequestId AND status IN ('REQUESTED', 'ASSIGNED', 'ON_THE_WAY') LIMIT 1")
+    suspend fun getActiveTransportForPlacement(placementRequestId: Long): TransportRequest?
 
     @Query("SELECT * FROM transport_requests ORDER BY created_at DESC")
     fun getAllTransportRequests(): Flow<List<TransportRequest>>

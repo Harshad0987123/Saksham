@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Info
@@ -86,9 +87,11 @@ fun RequestStatusScreen(
     }
 
     val scrollState = rememberScrollState()
-    val isConfirmed = request.status in listOf("CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "COMPLETED")
+    // APPROVED is the DB value set by approvePlacementRequest(). CONFIRMED, TRANSPORT_* are downstream statuses.
+    val isConfirmed = request.status in listOf("APPROVED", "CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "ARRIVED", "COMPLETED")
     val isRejected = request.status == "REJECTED"
-    val isPending = request.status in listOf("REQUEST_SENT", "PENDING")
+    // REQUESTED is the initial status when a survivor submits a placement request
+    val isPending = request.status in listOf("REQUESTED", "REQUEST_SENT", "PENDING")
 
     Column(
         modifier = Modifier
@@ -172,9 +175,9 @@ fun RequestStatusScreen(
 
                 Text(
                     text = when {
-                        isConfirmed -> "PLACEMENT CONFIRMED"
+                        isConfirmed -> "✓ PLACEMENT APPROVED"
                         isRejected -> "PLACEMENT NOT ACCEPTED"
-                        else -> "REQUEST SENT (PENDING)"
+                        else -> "REQUEST SENT — AWAITING REVIEW"
                     },
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
@@ -191,14 +194,41 @@ fun RequestStatusScreen(
 
                 Text(
                     text = when {
-                        isConfirmed -> "Shelter staff has reviewed and confirmed your accommodation."
+                        request.status == "COMPLETED" -> "Transport has completed. You have arrived safely at the shelter."
+                        request.status == "ON_THE_WAY" || request.status == "ARRIVED" -> "Your transport is on the way to the shelter."
+                        request.status in listOf("TRANSPORT_ASSIGNED", "TRANSPORT_REQUESTED") -> "Shelter confirmed. Transport vehicle is being coordinated."
+                        isConfirmed -> "Shelter staff has approved your placement. You may now request transport if needed."
                         isRejected -> "The shelter was unable to accept this request. Please choose an alternate shelter."
-                        else -> "Your request is currently in queue. Shelter staff are reviewing bed availability."
+                        else -> "Your request is in queue. Shelter staff are reviewing bed availability."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
+
+                // Show rejection reason to survivor so they know why and can try another shelter
+                if (isRejected && !request.rejectionReason.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Reason from shelter staff:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = request.rejectionReason,
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
 
                 if (isConfirmed && request.confirmationCode.isNotBlank()) {
                     Spacer(modifier = Modifier.height(14.dp))
@@ -297,31 +327,41 @@ fun RequestStatusScreen(
             stepTitle = "Request Sent to Shelter",
             subtitle = "Anonymous ticket #${request.id} dispatched",
             isDone = true,
-            isCurrent = request.status == "REQUEST_SENT"
+            isCurrent = isPending
         )
         TimelineStepItem(
-            stepTitle = "Shelter Review & Confirmation",
-            subtitle = if (isConfirmed) "Staff verified and confirmed space" else if (isRejected) "Rejected" else "Staff checking beds...",
-            isDone = isConfirmed,
-            isCurrent = request.status == "PENDING"
+            stepTitle = "Shelter Review",
+            subtitle = when {
+                isConfirmed -> "Staff approved your placement ✓"
+                isRejected -> "Request declined"
+                else -> "Staff reviewing bed availability..."
+            },
+            isDone = isConfirmed || isRejected,
+            isCurrent = isPending
         )
         TimelineStepItem(
-            stepTitle = "Placement Confirmed",
-            subtitle = if (isConfirmed) "Intake code generated" else "Awaiting confirmation",
+            stepTitle = "Placement Approved",
+            subtitle = when {
+                request.status == "APPROVED" && request.confirmationCode.isNotBlank() -> "Code: ${request.confirmationCode}"
+                isConfirmed -> "Approved — transport coordination available"
+                else -> "Awaiting shelter staff approval"
+            },
             isDone = isConfirmed,
-            isCurrent = request.status == "CONFIRMED"
+            isCurrent = request.status == "APPROVED"
         )
         TimelineStepItem(
             stepTitle = "Transport Coordination",
             subtitle = when {
-                transportRequest != null && transportRequest.status == "COMPLETED" -> "Arrived at shelter safely"
+                transportRequest != null && transportRequest.status == "COMPLETED" -> "Arrived at shelter safely ✓"
+                transportRequest != null && transportRequest.status == "ARRIVED" -> "Vehicle arrived at pickup"
                 transportRequest != null && transportRequest.status == "ON_THE_WAY" -> "Vehicle on the way"
                 transportRequest != null && transportRequest.status == "ASSIGNED" -> "Vehicle assigned (ETA ${transportRequest.eta}m)"
-                transportRequest != null -> "Transport requested"
-                else -> "Available after confirmation"
+                transportRequest != null -> "Transport requested — awaiting dispatch"
+                request.transportRequired && isConfirmed -> "Transport will be coordinated shortly"
+                else -> "Available after placement approval"
             },
-            isDone = transportRequest != null && transportRequest.status in listOf("ASSIGNED", "ON_THE_WAY", "COMPLETED"),
-            isCurrent = request.status in listOf("TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY")
+            isDone = transportRequest != null && transportRequest.status in listOf("ASSIGNED", "ON_THE_WAY", "ARRIVED", "COMPLETED"),
+            isCurrent = request.status in listOf("TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "ARRIVED")
         )
 
         Spacer(modifier = Modifier.height(20.dp))

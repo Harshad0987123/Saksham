@@ -616,8 +616,11 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                         onConfirmRequest = { reqId ->
                             viewModel.confirmPlacement(reqId)
                         },
-                        onRejectRequest = { reqId ->
-                            viewModel.rejectPlacement(reqId)
+                        onRejectRequest = { reqId, reason ->
+                            viewModel.rejectPlacement(reqId, reason)
+                        },
+                        onSwitchRoleToSurvivor = {
+                            viewModel.setRole(AppRole.SURVIVOR)
                         }
                     )
                 }
@@ -629,8 +632,20 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                         onAssignVehicle = { tId, pId, provider, eta ->
                             viewModel.assignVehicleToRequest(tId, pId, provider, eta)
                         },
-                        onUpdateTransportStatus = { tId, pId, status ->
-                            viewModel.updateTransportStatus(tId, pId, status)
+                        onUpdateTransportStatus = { tId, pId, providerId, status ->
+                            viewModel.updateTransportStatus(tId, pId, providerId, status)
+                        },
+                        onSetEta = { tId, eta ->
+                            viewModel.setTransportEta(tId, eta)
+                        },
+                        onToggleVehicleAvailability = { pId, available ->
+                            viewModel.toggleVehicleAvailability(pId, available)
+                        },
+                        onDeclineRequest = { tId, reason ->
+                            viewModel.declineTransportRequest(tId, reason)
+                        },
+                        onSwitchRoleToSurvivor = {
+                            viewModel.setRole(AppRole.SURVIVOR)
                         }
                     )
                 }

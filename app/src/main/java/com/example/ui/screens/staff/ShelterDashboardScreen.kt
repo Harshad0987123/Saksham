@@ -1,5 +1,6 @@
 package com.example.ui.screens.staff
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,17 +17,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NightShelter
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +45,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,8 +54,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,8 +75,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.AvailabilityLog
 import com.example.data.model.PlacementRequest
 import com.example.data.model.Shelter
+import com.example.data.model.formatAdults
+import com.example.data.model.formatChildren
+import com.example.data.model.formatTotalPeople
 import com.example.ui.components.FreshnessBadge
-import com.example.ui.components.RequirementBadge
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,14 +94,39 @@ fun ShelterDashboardScreen(
     onSelectShelter: (Long) -> Unit,
     onUpdateBeds: (Long, Int, String) -> Unit,
     onConfirmRequest: (Long) -> Unit,
-    onRejectRequest: (Long) -> Unit
+    onRejectRequest: (Long, String) -> Unit,
+    onSwitchRoleToSurvivor: () -> Unit = {}
 ) {
+    BackHandler {
+        onSwitchRoleToSurvivor()
+    }
+
     val activeShelter = shelters.find { it.id == selectedShelterId } ?: shelters.firstOrNull()
     var bedInput by remember(activeShelter) { mutableIntStateOf(activeShelter?.availableBeds ?: 4) }
     var shelterDropdownExpanded by remember { mutableStateOf(false) }
 
+    var selectedSectionFilter by remember { mutableStateOf("All") }
+    var requestToDecline by remember { mutableStateOf<PlacementRequest?>(null) }
+    var selectedDeclineReason by remember { mutableStateOf("Shelter currently cannot accommodate this request.") }
+
     val currentShelterRequests = placementRequests.filter {
         activeShelter == null || it.shelterId == activeShelter.id
+    }
+
+    val newRequestsCount = currentShelterRequests.count { it.status in listOf("REQUESTED", "PENDING", "REQUEST_SENT") }
+    val approvedRequestsCount = currentShelterRequests.count {
+        it.status in listOf("APPROVED", "CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "COMPLETED")
+    }
+    val rejectedRequestsCount = currentShelterRequests.count { it.status == "REJECTED" }
+    val activeTotalCount = currentShelterRequests.size
+
+    val displayedRequests = when (selectedSectionFilter) {
+        "NEW REQUESTS" -> currentShelterRequests.filter { it.status in listOf("REQUESTED", "PENDING", "REQUEST_SENT") }
+        "APPROVED REQUESTS" -> currentShelterRequests.filter {
+            it.status in listOf("APPROVED", "CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "COMPLETED")
+        }
+        "REJECTED REQUESTS" -> currentShelterRequests.filter { it.status == "REJECTED" }
+        else -> currentShelterRequests
     }
 
     LazyColumn(
@@ -103,6 +144,15 @@ fun ShelterDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                IconButton(
+                    onClick = onSwitchRoleToSurvivor,
+                    modifier = Modifier.testTag("shelter_dash_back_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to Survivor Flow"
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -133,7 +183,44 @@ fun ShelterDashboardScreen(
             }
         }
 
-        // Shelter Selector Dropdown (PRD FR-13)
+        // Summary Metric Chips
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MetricCard(
+                    title = "New Requests",
+                    count = newRequestsCount,
+                    containerColor = WarningAmberContainer,
+                    contentColor = WarningAmber,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    title = "Approved",
+                    count = approvedRequestsCount,
+                    containerColor = FreshGreenContainer,
+                    contentColor = FreshGreen,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    title = "Rejected",
+                    count = rejectedRequestsCount,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    title = "Active Total",
+                    count = activeTotalCount,
+                    containerColor = TealContainer,
+                    contentColor = NavySecondary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Shelter Selector Dropdown
         item {
             ExposedDropdownMenuBox(
                 expanded = shelterDropdownExpanded,
@@ -169,7 +256,7 @@ fun ShelterDashboardScreen(
             }
         }
 
-        // Active Shelter Verification & Info Card (PRD Section 15)
+        // Active Shelter Verification & Info Card
         if (activeShelter != null) {
             item {
                 Card(
@@ -248,7 +335,7 @@ fun ShelterDashboardScreen(
             }
         }
 
-        // Live Bed Adjustment Card (PRD FR-13, FR-14)
+        // Live Bed Adjustment Card
         if (activeShelter != null) {
             item {
                 Card(
@@ -358,25 +445,49 @@ fun ShelterDashboardScreen(
             }
         }
 
-        // Incoming Intake Queue (PRD FR-15, FR-16)
+        // Section Filters
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Spacer(modifier = Modifier.height(6.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "INCOMING PLACEMENT REQUESTS (${currentShelterRequests.size})",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                val sections = listOf("All", "NEW REQUESTS", "APPROVED REQUESTS", "REJECTED REQUESTS")
+                items(sections) { section ->
+                    FilterChip(
+                        selected = selectedSectionFilter == section,
+                        onClick = { selectedSectionFilter = section },
+                        label = {
+                            val count = when (section) {
+                                "NEW REQUESTS" -> newRequestsCount
+                                "APPROVED REQUESTS" -> approvedRequestsCount
+                                "REJECTED REQUESTS" -> rejectedRequestsCount
+                                else -> activeTotalCount
+                            }
+                            Text("$section ($count)")
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = NavySecondary,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
             }
         }
 
-        if (currentShelterRequests.isEmpty()) {
+        // Section Heading
+        item {
+            Text(
+                text = if (selectedSectionFilter == "All") "PLACEMENT REQUESTS (${displayedRequests.size})" else "$selectedSectionFilter (${displayedRequests.size})",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                ),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        if (displayedRequests.isEmpty()) {
             item {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -384,7 +495,7 @@ fun ShelterDashboardScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "No pending placement requests for this shelter right now. Use the Survivor flow to submit an intake request!",
+                        text = "No placement requests found in '$selectedSectionFilter'.",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -392,16 +503,16 @@ fun ShelterDashboardScreen(
                 }
             }
         } else {
-            items(currentShelterRequests, key = { "request_${it.id}" }) { req ->
+            items(displayedRequests, key = { "request_${it.id}" }) { req ->
                 StaffRequestCard(
                     request = req,
-                    onConfirm = { onConfirmRequest(req.id) },
-                    onReject = { onRejectRequest(req.id) }
+                    onApprove = { onConfirmRequest(req.id) },
+                    onDecline = { requestToDecline = req }
                 )
             }
         }
 
-        // Availability Audit Trail (PRD FR-14)
+        // Availability Audit Trail
         item {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -469,6 +580,104 @@ fun ShelterDashboardScreen(
             Spacer(modifier = Modifier.height(36.dp))
         }
     }
+
+    // Decline Confirmation Dialog
+    if (requestToDecline != null) {
+        val req = requestToDecline!!
+        val reasons = listOf(
+            "Shelter currently cannot accommodate this request.",
+            "No suitable beds currently available.",
+            "Cannot accommodate wheelchair accessibility requirements.",
+            "Cannot accommodate family / children requirements.",
+            "Facility undergoing maintenance."
+        )
+
+        AlertDialog(
+            onDismissRequest = { requestToDecline = null },
+            title = {
+                Text(
+                    text = "Decline Placement Request #${req.id}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Select reason for declining. This reason will be clearly displayed to the survivor so they can choose another shelter:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    reasons.forEach { reason ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedDeclineReason == reason,
+                                onClick = { selectedDeclineReason = reason }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = reason,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onRejectRequest(req.id, selectedDeclineReason)
+                        requestToDecline = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Decline Request")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { requestToDecline = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MetricCard(
+    title: String,
+    count: Int,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = containerColor,
+        shape = RoundedCornerShape(10.dp),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                color = contentColor
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = contentColor,
+                maxLines = 1
+            )
+        }
+    }
 }
 
 @Composable
@@ -497,84 +706,203 @@ private fun FilledIconButton(
 @Composable
 private fun StaffRequestCard(
     request: PlacementRequest,
-    onConfirm: () -> Unit,
-    onReject: () -> Unit
+    onApprove: () -> Unit,
+    onDecline: () -> Unit
 ) {
-    val isPending = request.status in listOf("REQUEST_SENT", "PENDING")
-    val isConfirmed = request.status in listOf("CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "COMPLETED")
+    val isPending = request.status in listOf("REQUEST_SENT", "PENDING", "REQUESTED")
+    val isApproved = request.status in listOf("APPROVED", "CONFIRMED", "TRANSPORT_REQUESTED", "TRANSPORT_ASSIGNED", "ON_THE_WAY", "COMPLETED")
+    val isRejected = request.status == "REJECTED"
+
+    val statusDisplay = when (request.status) {
+        "REQUESTED", "PENDING", "REQUEST_SENT" -> "Pending Review"
+        "APPROVED", "CONFIRMED" -> "Placement Approved"
+        "TRANSPORT_REQUESTED" -> "Transport Requested"
+        "TRANSPORT_ASSIGNED" -> "Transport Assigned"
+        "ON_THE_WAY" -> "Transport On The Way"
+        "COMPLETED" -> "Placement Completed"
+        "REJECTED" -> "Declined"
+        else -> request.status.replace('_', ' ')
+    }
+
+    val timeFormat = SimpleDateFormat("hh:mm a, dd MMM", Locale.getDefault())
+    val formattedTime = timeFormat.format(Date(request.createdAt))
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("staff_request_card_${request.id}")
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: Placement Request #ID + Status Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Ticket #${request.id} • Session ${request.sessionId}",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    text = "Placement Request #${request.id}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Surface(
                     color = when {
-                        isConfirmed -> FreshGreenContainer
-                        request.status == "REJECTED" -> MaterialTheme.colorScheme.errorContainer
-                        else -> TealContainer
+                        isApproved -> FreshGreenContainer
+                        isRejected -> MaterialTheme.colorScheme.errorContainer
+                        else -> WarningAmberContainer
                     },
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = request.status.replace('_', ' '),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        text = statusDisplay,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
                             color = when {
-                                isConfirmed -> FreshGreen
-                                request.status == "REJECTED" -> MaterialTheme.colorScheme.error
-                                else -> TealPrimary
+                                isApproved -> FreshGreen
+                                isRejected -> MaterialTheme.colorScheme.error
+                                else -> WarningAmber
                             }
                         )
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Accommodations tags
+            // Breakdown: 2 Adults, 1 Child, 3 People
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                RequirementBadge(
-                    label = if (request.needsChildren) "Child Accompaniment" else "Single Individual",
-                    isAccepted = request.needsChildren,
-                    modifier = Modifier.weight(1f)
-                )
-                RequirementBadge(
-                    label = if (request.needsWheelchair) "Wheelchair Accessible" else "Standard Entry",
-                    isAccepted = request.needsWheelchair,
-                    modifier = Modifier.weight(1f)
-                )
+                Column {
+                    Text(
+                        text = "Passengers:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${formatAdults(request.adults)} • ${formatChildren(request.children)}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Total People:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = formatTotalPeople(request.totalPeople),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TealPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Service: ${request.serviceType} • Shelter: ${request.shelterName}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Wheelchair & Transport badges
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    color = if (request.wheelchairRequired) WarningAmberContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Accessible,
+                            contentDescription = null,
+                            tint = if (request.wheelchairRequired) WarningAmber else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (request.wheelchairRequired) "Wheelchair Required" else "No Wheelchair",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (request.wheelchairRequired) WarningAmber else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
-            if (isConfirmed && request.confirmationCode.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    color = if (request.transportRequired) TealContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsCar,
+                            contentDescription = null,
+                            tint = if (request.transportRequired) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (request.transportRequired) "Transport Required" else "No Transport",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (request.transportRequired) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Requested Shelter & Request Time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.NightShelter,
+                        contentDescription = null,
+                        tint = TealPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = request.shelterName,
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formattedTime,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (isApproved && request.confirmationCode.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     color = FreshGreenContainer,
                     shape = RoundedCornerShape(6.dp),
@@ -591,15 +919,33 @@ private fun StaffRequestCard(
                 }
             }
 
+            if (isRejected && !request.rejectionReason.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Reason: ${request.rejectionReason}",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    )
+                }
+            }
+
             // Action Buttons
             if (isPending) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onReject,
+                        onClick = onDecline,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .weight(1f)
@@ -607,11 +953,11 @@ private fun StaffRequestCard(
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Decline")
+                        Text("DECLINE")
                     }
 
                     Button(
-                        onClick = onConfirm,
+                        onClick = onApprove,
                         colors = ButtonDefaults.buttonColors(containerColor = FreshGreen),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
@@ -620,7 +966,7 @@ private fun StaffRequestCard(
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Confirm Space")
+                        Text("APPROVE", fontWeight = FontWeight.Bold)
                     }
                 }
             }

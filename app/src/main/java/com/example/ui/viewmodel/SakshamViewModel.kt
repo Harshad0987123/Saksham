@@ -360,10 +360,11 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
                 totalPeople = currentNeeds.totalPeople,
                 wheelchairRequired = currentNeeds.wheelchairRequired,
                 transportRequired = transportRequested,
+                pickupArea = currentNeeds.generalArea,
                 needsChildren = currentNeeds.childrenRequired,
                 needsWheelchair = currentNeeds.wheelchairRequired,
                 serviceType = if (transportRequested) "Shelter + Transport Assistance" else "Safe Shelter",
-                status = "PENDING",
+                status = "REQUESTED",
                 intakeNotes = "Safety intake for ${formatPeopleCount(currentNeeds.totalPeople, currentNeeds.adults, currentNeeds.children)}."
             )
             val newId = repository.createPlacementRequest(request)
@@ -380,18 +381,22 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
     fun requestTransport(placementId: Long, shelterName: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             val currentNeeds = _needs.value
-            val req = TransportRequest(
-                placementRequestId = placementId,
-                adults = currentNeeds.adults,
-                children = currentNeeds.children,
-                passengers = currentNeeds.totalPeople,
-                wheelchairRequired = currentNeeds.wheelchairRequired,
-                pickupArea = currentNeeds.generalArea,
-                destinationShelterName = shelterName,
-                status = "REQUESTED",
-                eta = if (currentNeeds.wheelchairRequired) 15 else 8
-            )
-            repository.createTransportRequest(req)
+            val existing = repository.getTransportRequestByPlacementIdDirect(placementId)
+            if (existing == null) {
+                val req = TransportRequest(
+                    placementRequestId = placementId,
+                    userId = _sessionId.value,
+                    destinationShelterName = shelterName,
+                    pickupArea = currentNeeds.generalArea,
+                    adults = currentNeeds.adults,
+                    children = currentNeeds.children,
+                    passengers = currentNeeds.totalPeople,
+                    wheelchairRequired = currentNeeds.wheelchairRequired,
+                    status = "REQUESTED",
+                    eta = 15
+                )
+                repository.createTransportRequest(req)
+            }
             repository.updatePlacementStatus(placementId, "TRANSPORT_REQUESTED")
             addNotification(
                 title = "🚗 Transport requested",
@@ -403,37 +408,51 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // --- Shelter Staff Actions ---
-    fun confirmPlacement(requestId: Long) {
+    fun approvePlacement(requestId: Long) {
         viewModelScope.launch {
             val verificationCode = "SK-CF${Random.nextInt(1000, 9999)}"
-            repository.confirmPlacementRequest(requestId, verificationCode)
+            repository.approvePlacement(requestId, verificationCode)
             val req = repository.getPlacementRequestByIdDirect(requestId)
             if (req != null && req.transportRequired) {
-                val tReq = TransportRequest(
-                    placementRequestId = requestId,
-                    adults = req.adults,
-                    children = req.children,
-                    passengers = req.totalPeople,
-                    wheelchairRequired = req.wheelchairRequired,
-                    pickupArea = "Central District",
-                    destinationShelterName = req.shelterName,
-                    status = "REQUESTED",
-                    eta = if (req.wheelchairRequired) 15 else 8
-                )
-                repository.createTransportRequest(tReq)
-                repository.updatePlacementStatus(requestId, "TRANSPORT_REQUESTED")
+                // Prevent duplicate transport requests: check if one already exists
+                val existingTransport = repository.getTransportRequestByPlacementIdDirect(requestId)
+                if (existingTransport == null) {
+                    val tReq = TransportRequest(
+                        placementRequestId = requestId,
+                        userId = req.sessionId,
+                        destinationShelterId = req.shelterId,
+                        destinationShelterName = req.shelterName,
+                        pickupArea = req.pickupArea,
+                        adults = req.adults,
+                        children = req.children,
+                        passengers = req.totalPeople,
+                        wheelchairRequired = req.wheelchairRequired,
+                        status = "REQUESTED",
+                        eta = 15
+                    )
+                    repository.createTransportRequest(tReq)
+                }
             }
             addNotification(
-                title = "✓ Shelter confirmed",
-                message = "Your placement has been confirmed.",
+                title = "✓ Placement Approved",
+                message = "Shelter placement has been approved.",
                 iconType = "CHECK"
             )
         }
     }
 
-    fun rejectPlacement(requestId: Long) {
+    fun confirmPlacement(requestId: Long) {
+        approvePlacement(requestId)
+    }
+
+    fun rejectPlacement(requestId: Long, reason: String = "Shelter currently cannot accommodate this request.") {
         viewModelScope.launch {
-            repository.rejectPlacementRequest(requestId)
+            repository.rejectPlacement(requestId, reason)
+            addNotification(
+                title = "✕ Shelter Request Declined",
+                message = "Request #$requestId was declined: $reason",
+                iconType = "INFO"
+            )
         }
     }
 
@@ -459,16 +478,60 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
                 eta = simulatedEta
             )
             addNotification(
-                title = "🚗 Transport assigned",
+                title = "🚗 Transport Assigned",
                 message = "${provider.name} (${provider.vehicleType}) assigned with ~${simulatedEta}m ETA.",
                 iconType = "TRANSPORT"
             )
         }
     }
 
-    fun updateTransportStatus(transportId: Long, placementRequestId: Long, status: String) {
+    fun declineTransportRequest(transportId: Long, reason: String = "No suitable vehicle currently available.") {
         viewModelScope.launch {
-            repository.updateTransportStatus(transportId, placementRequestId, status)
+            repository.declineTransportRequest(transportId, reason)
+            addNotification(
+                title = "✕ Transport Request Declined",
+                message = "Transport request declined: $reason",
+                iconType = "INFO"
+            )
+        }
+    }
+
+    fun updateTransportStatus(
+        transportId: Long,
+        placementRequestId: Long,
+        providerId: Long?,
+        status: String
+    ) {
+        viewModelScope.launch {
+            repository.updateTransportStatus(transportId, placementRequestId, providerId, status)
+            val friendlyStatus = when (status) {
+                "ON_THE_WAY" -> "On The Way"
+                "ARRIVED" -> "Arrived"
+                "COMPLETED" -> "Completed"
+                else -> status.replace('_', ' ')
+            }
+            addNotification(
+                title = "🚗 Transport: $friendlyStatus",
+                message = "Transport status updated to $friendlyStatus.",
+                iconType = "TRANSPORT"
+            )
+        }
+    }
+
+    fun setTransportEta(transportId: Long, eta: Int) {
+        viewModelScope.launch {
+            repository.updateTransportEta(transportId, eta)
+            addNotification(
+                title = "⏱️ Transport ETA updated",
+                message = "ETA updated to $eta min.",
+                iconType = "TRANSPORT"
+            )
+        }
+    }
+
+    fun toggleVehicleAvailability(providerId: Long, available: Boolean) {
+        viewModelScope.launch {
+            repository.updateVehicleAvailability(providerId, available)
         }
     }
 

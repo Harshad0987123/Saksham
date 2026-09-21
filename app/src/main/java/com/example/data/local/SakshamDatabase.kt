@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
         TransportRequest::class,
         AvailabilityLog::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class SakshamDatabase : RoomDatabase() {
@@ -305,10 +305,34 @@ abstract class SakshamDatabase : RoomDatabase() {
             val initialProviders = listOf(
                 TransportProvider(
                     id = 1,
-                    name = "SafeRide Accessible Van",
+                    name = "Auto 01",
+                    vehicleType = "Auto",
+                    wheelchairAccessible = false,
+                    passengerCapacity = 2,
+                    available = true,
+                    status = "Available",
+                    driverName = "Mohan Das",
+                    vehiclePlate = "DL-02-XY-9014",
+                    etaMinutes = 10
+                ),
+                TransportProvider(
+                    id = 2,
+                    name = "Vehicle A",
+                    vehicleType = "Sedan",
+                    wheelchairAccessible = false,
+                    passengerCapacity = 4,
+                    available = true,
+                    status = "Available",
+                    driverName = "Anita Patel",
+                    vehiclePlate = "DL-01-BK-3390",
+                    etaMinutes = 10
+                ),
+                TransportProvider(
+                    id = 3,
+                    name = "Van 01 (Accessible)",
                     vehicleType = "Van",
                     wheelchairAccessible = true,
-                    passengerCapacity = 7,
+                    passengerCapacity = 4,
                     available = true,
                     status = "Available",
                     driverName = "Ramesh Kumar",
@@ -316,40 +340,28 @@ abstract class SakshamDatabase : RoomDatabase() {
                     etaMinutes = 15
                 ),
                 TransportProvider(
-                    id = 2,
-                    name = "SwiftCare Transit Car",
-                    vehicleType = "Car",
-                    wheelchairAccessible = false,
-                    passengerCapacity = 4,
-                    available = true,
-                    status = "Available",
-                    driverName = "Anita Patel",
-                    vehiclePlate = "DL-01-BK-3390",
-                    etaMinutes = 8
-                ),
-                TransportProvider(
-                    id = 3,
-                    name = "HopeShuttle Large Accessible Van",
-                    vehicleType = "Large Van",
+                    id = 4,
+                    name = "Vehicle C",
+                    vehicleType = "Mini Van",
                     wheelchairAccessible = true,
-                    passengerCapacity = 10,
-                    available = true,
-                    status = "Available",
+                    passengerCapacity = 5,
+                    available = false,
+                    status = "Unavailable",
                     driverName = "Vikram Singh",
                     vehiclePlate = "DL-08-WZ-5512",
                     etaMinutes = 15
                 ),
                 TransportProvider(
-                    id = 4,
-                    name = "City QuickRelief Compact",
-                    vehicleType = "Car",
-                    wheelchairAccessible = false,
-                    passengerCapacity = 3,
+                    id = 5,
+                    name = "Vehicle B",
+                    vehicleType = "Van",
+                    wheelchairAccessible = true,
+                    passengerCapacity = 7,
                     available = true,
                     status = "Available",
-                    driverName = "Mohan Das",
-                    vehiclePlate = "DL-02-XY-9014",
-                    etaMinutes = 10
+                    driverName = "Suresh Sharma",
+                    vehiclePlate = "DL-05-SR-1100",
+                    etaMinutes = 20
                 )
             )
             dao.insertTransportProviders(initialProviders)
