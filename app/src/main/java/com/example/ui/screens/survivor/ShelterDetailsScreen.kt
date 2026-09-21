@@ -18,9 +18,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Shelter
 import com.example.data.model.SurvivorNeeds
 import com.example.data.model.calculateFreshness
+import com.example.data.model.formatPeopleCount
+import com.example.data.model.formatTotalPeople
 import com.example.ui.components.FreshnessBadge
 import com.example.ui.components.PrivacyBanner
 import com.example.ui.theme.FreshGreen
@@ -138,6 +140,34 @@ fun ShelterDetailsScreen(
                     )
                 }
 
+                if (shelter.verified && shelter.verificationStatus == "approved") {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        color = TealContainer.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = TealPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "✓ Saksham Verified Shelter",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TealPrimary
+                                )
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Can accommodate your group banner
@@ -166,7 +196,7 @@ fun ShelterDetailsScreen(
                                 )
                             )
                             Text(
-                                text = "Verified for your ${needs.totalPeople} requested spaces",
+                                text = "Verified for your ${needs.totalPeople} ${if (needs.totalPeople == 1) "requested space" else "requested spaces"}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -178,7 +208,7 @@ fun ShelterDetailsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Shelter Specs Card (Section 5)
+        // Shelter Specs Card (Section 4 & 5)
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -187,7 +217,7 @@ fun ShelterDetailsScreen(
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Text(
-                    text = "ACCOMMODATION SPECIFICATIONS",
+                    text = "ACCOMMODATION REQUIREMENTS",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -201,7 +231,7 @@ fun ShelterDetailsScreen(
                 SpecRow(
                     icon = Icons.Default.Group,
                     label = "Required spaces",
-                    value = "${needs.totalPeople} people (${needs.adults} adults, ${needs.children} children)"
+                    value = formatPeopleCount(needs.totalPeople, needs.adults, needs.children)
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -210,18 +240,18 @@ fun ShelterDetailsScreen(
                 SpecRow(
                     icon = Icons.Default.ChildCare,
                     label = "Child accommodation",
-                    value = if (shelter.acceptsChildren) "Available" else "Not Available",
-                    isPositive = shelter.acceptsChildren
+                    value = if (needs.children > 0) "✓ Available" else "Not required",
+                    textColor = if (needs.children > 0) FreshGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 // Wheelchair accessibility
                 SpecRow(
-                    icon = Icons.Default.Accessible,
+                    icon = Icons.AutoMirrored.Filled.Accessible,
                     label = "Wheelchair accessibility",
-                    value = if (shelter.acceptsWheelchair) "Available" else "Not Available",
-                    isPositive = shelter.acceptsWheelchair
+                    value = if (needs.wheelchairRequired) "✓ Available" else "Not required",
+                    textColor = if (needs.wheelchairRequired) FreshGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -282,7 +312,8 @@ private fun SpecRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
-    isPositive: Boolean? = null
+    isPositive: Boolean? = null,
+    textColor: Color? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -320,7 +351,7 @@ private fun SpecRow(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                color = if (isPositive == true) FreshGreen else if (isPositive == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                color = textColor ?: (if (isPositive == true) FreshGreen else if (isPositive == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
             )
         }
     }

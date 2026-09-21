@@ -11,7 +11,12 @@ import com.example.data.model.Shelter
 import com.example.data.model.SurvivorNeeds
 import com.example.data.model.TransportProvider
 import com.example.data.model.TransportRequest
+import com.example.data.model.formatAdults
+import com.example.data.model.formatChildren
+import com.example.data.model.formatPeopleCount
+import com.example.data.model.formatTotalPeople
 import com.example.data.repository.SakshamRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,12 +27,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-enum class AppRole(val label: String) {
-    SURVIVOR("Person Seeking Safety"),
-    SHELTER_STAFF("Shelter Staff"),
-    TRANSPORT_PROVIDER("Transport Provider")
+enum class AppRole(val roleKey: String, val label: String) {
+    SURVIVOR("user", "Person Seeking Safety"),
+    SHELTER_STAFF("shelter_staff", "Shelter Staff"),
+    TRANSPORT_PROVIDER("transport_staff", "Transport Provider"),
+    ADMIN("admin", "Administrator")
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SakshamViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: SakshamRepository
@@ -50,6 +57,18 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
     private val _userContact = MutableStateFlow("ananya.s@example.com")
     val userContact: StateFlow<String> = _userContact.asStateFlow()
 
+    // Role state
+    private val _currentRole = MutableStateFlow(AppRole.SURVIVOR)
+    val currentRole: StateFlow<AppRole> = _currentRole.asStateFlow()
+
+    private val _userRole = MutableStateFlow("user")
+    val userRole: StateFlow<String> = _userRole.asStateFlow()
+
+    fun setRole(role: AppRole) {
+        _currentRole.value = role
+        _userRole.value = role.roleKey
+    }
+
     private val _userWheelchairPref = MutableStateFlow(false)
     val userWheelchairPref: StateFlow<Boolean> = _userWheelchairPref.asStateFlow()
 
@@ -67,18 +86,38 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         _isLoggedIn.value = true
+        setRole(AppRole.SURVIVOR)
+    }
+
+    fun loginAdmin(contact: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        if (contact.isBlank()) {
+            onError("Please enter admin identifier or email.")
+            return
+        }
+        _userContact.value = contact
+        _userName.value = "Saksham Administrator"
+        _isLoggedIn.value = true
+        setRole(AppRole.ADMIN)
+        addNotification(
+            title = "🛡️ Admin Session Active",
+            message = "Logged in as Administrator with verification authority.",
+            iconType = "CHECK"
+        )
+        onSuccess()
     }
 
     fun register(name: String, contact: String, pass: String) {
         if (name.isNotBlank()) _userName.value = name
         if (contact.isNotBlank()) _userContact.value = contact
         _isLoggedIn.value = true
+        setRole(AppRole.SURVIVOR)
     }
 
     fun logout() {
         _isLoggedIn.value = false
         _activePlacementId.value = null
         _sessionId.value = generateAnonymousSessionId()
+        setRole(AppRole.SURVIVOR)
     }
 
     fun updateProfile(
@@ -118,14 +157,6 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
         _notifications.value = listOf(newNotification) + _notifications.value
     }
 
-    // Role switcher
-    private val _currentRole = MutableStateFlow(AppRole.SURVIVOR)
-    val currentRole: StateFlow<AppRole> = _currentRole.asStateFlow()
-
-    fun setRole(role: AppRole) {
-        _currentRole.value = role
-    }
-
     // Anonymous Session
     private val _sessionId = MutableStateFlow(generateAnonymousSessionId())
     val sessionId: StateFlow<String> = _sessionId.asStateFlow()
@@ -152,22 +183,14 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
         _showOnlyEligible.value = onlyEligible
     }
 
-    // Shelters list reactively filtered by matching rules (PRD Section 3)
+    // Shelters list reactively filtered by matching rules (Section 1 & 3)
     val shelters: StateFlow<List<Shelter>> = combine(
         repository.allShelters,
         _needs,
         _showOnlyEligible
     ) { all, currentNeeds, onlyEligible ->
         if (onlyEligible) {
-            // Matching rule:
-            // available_beds >= total_people
-            // AND (if children_required: accepts_children == true)
-            // AND (if wheelchair_required: accepts_wheelchair == true)
-            all.filter { shelter ->
-                shelter.availableBeds >= currentNeeds.totalPeople &&
-                (!currentNeeds.childrenRequired || shelter.acceptsChildren) &&
-                (!currentNeeds.wheelchairRequired || shelter.acceptsWheelchair)
-            }.sortedBy { it.travelTimeMinutes }
+            matchShelters(currentNeeds, all).sortedBy { it.travelTimeMinutes }
         } else {
             all.sortedBy { it.travelTimeMinutes }
         }
@@ -268,10 +291,9 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateChildren(count: Int) {
         val newChildren = count.coerceAtLeast(0)
-        val childReq = newChildren > 0 || _needs.value.needsChildren
         _needs.value = _needs.value.copy(
             children = newChildren,
-            needsChildren = childReq
+            needsChildren = newChildren > 0
         )
     }
 
@@ -287,7 +309,7 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggleChildRequirement(enabled: Boolean) {
-        // Automatically required if children > 0
+        // Required only if children > 0 or explicitly set
         val effective = if (_needs.value.children > 0) true else enabled
         _needs.value = _needs.value.copy(needsChildren = effective)
     }
@@ -312,6 +334,18 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
         _needs.value = _needs.value.copy(generalArea = area)
     }
 
+    fun resetNeeds() {
+        _needs.value = SurvivorNeeds(
+            adults = 1,
+            children = 0,
+            userType = "1 Adult",
+            serviceType = "Safe Shelter",
+            needsChildren = false,
+            needsWheelchair = false,
+            generalArea = "Central District"
+        )
+    }
+
     // --- Survivor Flow Actions ---
     fun submitPlacementRequest(shelter: Shelter, transportRequested: Boolean, onSuccess: (Long) -> Unit) {
         viewModelScope.launch {
@@ -330,13 +364,13 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
                 needsWheelchair = currentNeeds.wheelchairRequired,
                 serviceType = if (transportRequested) "Shelter + Transport Assistance" else "Safe Shelter",
                 status = "PENDING",
-                intakeNotes = "Safety intake for ${currentNeeds.totalPeople} people (${currentNeeds.adults} adults, ${currentNeeds.children} children)."
+                intakeNotes = "Safety intake for ${formatPeopleCount(currentNeeds.totalPeople, currentNeeds.adults, currentNeeds.children)}."
             )
             val newId = repository.createPlacementRequest(request)
             _activePlacementId.value = newId
             addNotification(
                 title = "✓ Placement request sent",
-                message = "Your request for ${currentNeeds.totalPeople} people has been sent to ${shelter.name}.",
+                message = "Your request for ${formatTotalPeople(currentNeeds.totalPeople)} has been sent to ${shelter.name}.",
                 iconType = "CHECK"
             )
             onSuccess(newId)
@@ -452,7 +486,84 @@ class SakshamViewModel(application: Application) : AndroidViewModel(application)
         _activePlacementId.value = null
     }
 
+    // --- Admin Verification Actions ---
+    fun approveShelter(shelterId: Long, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val shelter = allSheltersRaw.value.find { it.id == shelterId }
+            if (shelter != null && shelter.verificationStatus == "approved" && shelter.verified) {
+                onResult(false, "This shelter is already approved.")
+                return@launch
+            }
+            repository.approveShelter(shelterId)
+            addNotification(
+                title = "Shelter Approved ✓",
+                message = "${shelter?.name ?: "Shelter"} is now verified and can appear in survivor searches.",
+                iconType = "CHECK"
+            )
+            onResult(true, "Shelter Approved ✓\nThis shelter is now verified and can appear in survivor searches.")
+        }
+    }
+
+    fun rejectShelter(shelterId: Long, reason: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val shelter = allSheltersRaw.value.find { it.id == shelterId }
+            val effectiveReason = if (reason.isBlank()) "Verification information incomplete" else reason
+            repository.rejectShelter(shelterId, effectiveReason)
+            addNotification(
+                title = "Shelter Verification Rejected",
+                message = "${shelter?.name ?: "Shelter"} was rejected: $effectiveReason",
+                iconType = "INFO"
+            )
+            onResult(true, "Shelter rejected. It will not appear in survivor searches.")
+        }
+    }
+
     private fun generateAnonymousSessionId(): String {
         return "SK-${Random.nextInt(1000, 9999)}"
+    }
+}
+
+/**
+ * Core matching rule (Section 11 & 12 of Saksham PRD):
+ *
+ * 1. Admin verification: verification_status == "approved" AND verified == true
+ * 2. Shelter must currently be available: availability_status == "available"
+ * 3. Capacity is ALWAYS required: available >= total_people
+ * 4. Children only matter if the user has children (children > 0)
+ * 5. Wheelchair only matters if requested (wheelchair_required == true)
+ * 6. Shelters with additional features are never excluded for users who don't need them.
+ */
+fun matchShelters(survivorNeeds: SurvivorNeeds, shelters: List<Shelter>): List<Shelter> {
+    return shelters.filter { shelter ->
+        // Admin verification
+        if (shelter.verificationStatus != "approved") {
+            return@filter false
+        }
+
+        if (!shelter.verified) {
+            return@filter false
+        }
+
+        // Shelter must currently be available
+        if (shelter.availabilityStatus != "available") {
+            return@filter false
+        }
+
+        // Capacity
+        if (shelter.availableBeds < survivorNeeds.totalPeople) {
+            return@filter false
+        }
+
+        // Children only matter if the user has children
+        if (survivorNeeds.children > 0 && !shelter.acceptsChildren) {
+            return@filter false
+        }
+
+        // Wheelchair only matters if requested
+        if (survivorNeeds.wheelchairRequired && !shelter.acceptsWheelchair) {
+            return@filter false
+        }
+
+        return@filter true
     }
 }

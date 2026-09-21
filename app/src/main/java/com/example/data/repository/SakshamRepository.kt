@@ -37,6 +37,34 @@ class SakshamRepository(private val dao: SakshamDao) {
         )
     }
 
+    suspend fun updateShelterVerification(
+        shelterId: Long,
+        status: String,
+        verified: Boolean,
+        rejectionReason: String? = null
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        dao.updateShelterVerification(shelterId, status, verified, rejectionReason, now)
+    }
+
+    suspend fun approveShelter(shelterId: Long) = updateShelterVerification(
+        shelterId = shelterId,
+        status = "approved",
+        verified = true,
+        rejectionReason = null
+    )
+
+    suspend fun rejectShelter(shelterId: Long, reason: String) = updateShelterVerification(
+        shelterId = shelterId,
+        status = "rejected",
+        verified = false,
+        rejectionReason = reason
+    )
+
+    fun getSheltersByVerificationStatus(status: String): Flow<List<Shelter>> =
+        dao.getSheltersByVerificationStatus(status)
+
+
     suspend fun createPlacementRequest(request: PlacementRequest): Long = withContext(Dispatchers.IO) {
         dao.insertPlacementRequest(request)
     }

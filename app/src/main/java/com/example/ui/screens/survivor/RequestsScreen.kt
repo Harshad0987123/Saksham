@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Lock
@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PlacementRequest
 import com.example.data.model.TransportRequest
+import com.example.data.model.formatAdults
+import com.example.data.model.formatChildren
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.FreshGreen
 import com.example.ui.theme.FreshGreenContainer
@@ -113,7 +115,7 @@ fun RequestsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Assignment,
+                                imageVector = Icons.AutoMirrored.Filled.Assignment,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(30.dp)
@@ -269,7 +271,7 @@ fun RequestsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "${req.adults} adults, ${req.children} children${if (req.wheelchairRequired) " • Wheelchair required" else ""}",
+                                text = "${formatAdults(req.adults)}, ${formatChildren(req.children)}${if (req.wheelchairRequired) " • Wheelchair required" else ""}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

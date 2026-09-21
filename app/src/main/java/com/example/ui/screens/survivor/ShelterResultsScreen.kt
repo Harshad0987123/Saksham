@@ -19,9 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.LocationOn
@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Shelter
 import com.example.data.model.SurvivorNeeds
+import com.example.data.model.formatPeopleCount
+import com.example.data.model.formatTotalPeople
 import com.example.ui.components.FreshnessBadge
 import com.example.ui.components.PrivacyBanner
 import com.example.ui.theme.FreshGreen
@@ -133,7 +135,7 @@ fun ShelterResultsScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "${needs.totalPeople} people (${needs.adults} adults, ${needs.children} children)" +
+                        text = formatPeopleCount(needs.totalPeople, needs.adults, needs.children) +
                                 if (needs.wheelchairRequired) " • Wheelchair required" else "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -296,6 +298,34 @@ fun ShelterItemCard(
                 FreshnessBadge(lastUpdatedMs = shelter.lastUpdated)
             }
 
+            if (shelter.verified && shelter.verificationStatus == "approved") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = TealContainer.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = TealPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "✓ Saksham Verified Shelter",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = TealPrimary
+                            )
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
             // Accommodation Guarantee Status (Section 4: Do NOT display total beds count)
@@ -324,7 +354,7 @@ fun ShelterItemCard(
                             )
                         )
                         Text(
-                            text = "Availability verified for your request (${needs.totalPeople} spaces required)",
+                            text = "Availability verified for your request (${needs.totalPeople} ${if (needs.totalPeople == 1) "space" else "spaces"} required)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -375,7 +405,7 @@ fun ShelterItemCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Accessible,
+                                imageVector = Icons.AutoMirrored.Filled.Accessible,
                                 contentDescription = null,
                                 tint = TealPrimary,
                                 modifier = Modifier.size(14.dp)

@@ -1,5 +1,6 @@
 package com.example.ui.screens.staff
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,8 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -59,11 +63,7 @@ import com.example.data.model.PlacementRequest
 import com.example.data.model.Shelter
 import com.example.ui.components.FreshnessBadge
 import com.example.ui.components.RequirementBadge
-import com.example.ui.theme.FreshGreen
-import com.example.ui.theme.FreshGreenContainer
-import com.example.ui.theme.NavySecondary
-import com.example.ui.theme.TealContainer
-import com.example.ui.theme.TealPrimary
+import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,11 +91,14 @@ fun ShelterDashboardScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Top Header
         item {
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -144,7 +147,7 @@ fun ShelterDashboardScreen(
                     label = { Text("Active Shelter Managed") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = shelterDropdownExpanded) },
                     modifier = Modifier
-                        .menuAnchor()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                         .fillMaxWidth()
                         .testTag("staff_shelter_dropdown")
                 )
@@ -161,6 +164,85 @@ fun ShelterDashboardScreen(
                                 shelterDropdownExpanded = false
                             }
                         )
+                    }
+                }
+            }
+        }
+
+        // Active Shelter Verification & Info Card (PRD Section 15)
+        if (activeShelter != null) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = activeShelter.name,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (activeShelter.verified && activeShelter.verificationStatus == "approved") {
+                                Surface(
+                                    color = FreshGreenContainer,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "✓ Verified by Saksham",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = FreshGreen
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Verification Status:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = activeShelter.verificationStatus.replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (activeShelter.verificationStatus == "approved") FreshGreen else WarningAmber
+                                    )
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "Available Spaces:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${activeShelter.availableBeds} beds",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = NavySecondary
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -310,7 +392,7 @@ fun ShelterDashboardScreen(
                 }
             }
         } else {
-            items(currentShelterRequests, key = { it.id }) { req ->
+            items(currentShelterRequests, key = { "request_${it.id}" }) { req ->
                 StaffRequestCard(
                     request = req,
                     onConfirm = { onConfirmRequest(req.id) },
@@ -348,7 +430,7 @@ fun ShelterDashboardScreen(
                 )
             }
         } else {
-            items(recentLogs, key = { it.id }) { log ->
+            items(recentLogs, key = { "log_${it.id}" }) { log ->
                 val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                 val timeString = timeFormat.format(Date(log.updatedAt))
                 Surface(
@@ -384,7 +466,7 @@ fun ShelterDashboardScreen(
         }
 
         item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(36.dp))
         }
     }
 }

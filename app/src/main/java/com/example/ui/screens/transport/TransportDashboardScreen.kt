@@ -10,15 +10,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Accessible
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -36,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -75,11 +78,14 @@ fun TransportDashboardScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Header
         item {
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -148,7 +154,7 @@ fun TransportDashboardScreen(
                 }
             }
         } else {
-            items(transportRequests, key = { it.id }) { req ->
+            items(transportRequests, key = { "request_${it.id}" }) { req ->
                 TransportDispatchCard(
                     request = req,
                     providers = transportProviders,
@@ -175,7 +181,7 @@ fun TransportDashboardScreen(
             )
         }
 
-        items(transportProviders, key = { it.id }) { provider ->
+        items(transportProviders, key = { "provider_${it.id}" }) { provider ->
             FleetProviderCard(provider = provider)
         }
 
@@ -304,7 +310,7 @@ private fun TransportDispatchCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Accessible,
+                        imageVector = Icons.AutoMirrored.Filled.Accessible,
                         contentDescription = null,
                         tint = if (request.wheelchairRequired) WarningAmber else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -412,7 +418,7 @@ private fun TransportDispatchCard(
                                 label = { Text("Available Suitable Vehicle") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown) },
                                 modifier = Modifier
-                                    .menuAnchor()
+                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                                     .fillMaxWidth()
                             )
                             ExposedDropdownMenu(
@@ -548,7 +554,7 @@ private fun FleetProviderCard(provider: TransportProvider) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (provider.wheelchairAccessible) Icons.Default.Accessible else Icons.Default.DirectionsCar,
+                        imageVector = if (provider.wheelchairAccessible) Icons.AutoMirrored.Filled.Accessible else Icons.Default.DirectionsCar,
                         contentDescription = null,
                         tint = if (provider.wheelchairAccessible) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)

@@ -23,17 +23,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.NightShelter
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Menu
@@ -83,8 +83,8 @@ sealed class NavItem(
     object Requests : NavItem(
         route = SakshamDestinations.REQUESTS,
         title = "Requests",
-        selectedIcon = Icons.Filled.Assignment,
-        unselectedIcon = Icons.Outlined.Assignment,
+        selectedIcon = Icons.AutoMirrored.Filled.Assignment,
+        unselectedIcon = Icons.AutoMirrored.Outlined.Assignment,
         testTag = "nav_item_requests"
     )
 
@@ -214,7 +214,7 @@ fun SakshamSideNavigation(
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MenuOpen,
+                                imageVector = Icons.AutoMirrored.Filled.MenuOpen,
                                 contentDescription = "Collapse navigation",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp)
@@ -342,6 +342,7 @@ fun SakshamSideNavigation(
                                                 AppRole.SURVIVOR -> Icons.Default.Person
                                                 AppRole.SHELTER_STAFF -> Icons.Default.NightShelter
                                                 AppRole.TRANSPORT_PROVIDER -> Icons.Default.DirectionsCar
+                                                AppRole.ADMIN -> Icons.Default.Shield
                                             },
                                             contentDescription = "Role",
                                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -352,6 +353,7 @@ fun SakshamSideNavigation(
                                                 AppRole.SURVIVOR -> "Survivor"
                                                 AppRole.SHELTER_STAFF -> "Shelter"
                                                 AppRole.TRANSPORT_PROVIDER -> "Transport"
+                                                AppRole.ADMIN -> "Admin"
                                             },
                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -376,6 +378,7 @@ fun SakshamSideNavigation(
                                             AppRole.SURVIVOR -> Icons.Default.Person
                                             AppRole.SHELTER_STAFF -> Icons.Default.NightShelter
                                             AppRole.TRANSPORT_PROVIDER -> Icons.Default.DirectionsCar
+                                            AppRole.ADMIN -> Icons.Default.Shield
                                         },
                                         contentDescription = "Switch Role",
                                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -401,6 +404,7 @@ fun SakshamSideNavigation(
                                                     AppRole.SURVIVOR -> Icons.Default.Person
                                                     AppRole.SHELTER_STAFF -> Icons.Default.NightShelter
                                                     AppRole.TRANSPORT_PROVIDER -> Icons.Default.DirectionsCar
+                                                    AppRole.ADMIN -> Icons.Default.Shield
                                                 },
                                                 contentDescription = null,
                                                 tint = if (role == currentRole) TealPrimary else MaterialTheme.colorScheme.onSurface,
@@ -411,6 +415,7 @@ fun SakshamSideNavigation(
                                                     AppRole.SURVIVOR -> "Survivor View"
                                                     AppRole.SHELTER_STAFF -> "Shelter Staff"
                                                     AppRole.TRANSPORT_PROVIDER -> "Transport Driver"
+                                                    AppRole.ADMIN -> "Admin Dashboard"
                                                 },
                                                 fontWeight = if (role == currentRole) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (role == currentRole) TealPrimary else MaterialTheme.colorScheme.onSurface

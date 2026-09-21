@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.data.model.formatTotalPeople
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -146,7 +147,7 @@ fun FindShelterStep3Screen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "$totalPeople ${if (totalPeople == 1) "person" else "people"} in need of placement",
+                            text = "${formatTotalPeople(totalPeople)} in need of placement",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -160,7 +161,7 @@ fun FindShelterStep3Screen(
                 // Detail Rows
                 SummaryItemRow(
                     label = "Total People",
-                    value = "$totalPeople",
+                    value = formatTotalPeople(totalPeople),
                     isHighlight = true
                 )
 
@@ -184,7 +185,7 @@ fun FindShelterStep3Screen(
 
                 SummaryItemRow(
                     label = "Wheelchair accessible",
-                    value = if (wheelchairRequired) "Yes" else "No",
+                    value = if (wheelchairRequired) "Required" else "Not required",
                     valueColor = if (wheelchairRequired) TealPrimary else MaterialTheme.colorScheme.onSurface
                 )
 

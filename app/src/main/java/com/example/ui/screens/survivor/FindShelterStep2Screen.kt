@@ -19,9 +19,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Lock
@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.data.model.formatChildren
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,9 +60,9 @@ fun FindShelterStep2Screen(
     onContinueClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    // Child requirement is automatically selected if childrenCount > 0 (PRD Section 2)
-    val isChildAutoSelected = childrenCount > 0
-    val effectiveChildSelected = if (isChildAutoSelected) true else childFriendlyRequired
+    // Child requirement is automatically active only if childrenCount > 0 (Section 1 & 2)
+    val hasChildren = childrenCount > 0
+    val effectiveChildSelected = hasChildren
 
     Column(
         modifier = Modifier
@@ -127,7 +128,7 @@ fun FindShelterStep2Screen(
         RequirementSelectCard(
             title = "Wheelchair-accessible space",
             subtitle = "Ramps, step-free access, and adapted restroom",
-            icon = Icons.Default.Accessible,
+            icon = Icons.AutoMirrored.Filled.Accessible,
             checked = wheelchairRequired,
             onCheckedChange = { onToggleWheelchair(it) },
             testTag = "requirement_wheelchair"
@@ -138,20 +139,19 @@ fun FindShelterStep2Screen(
         // Option 2: Child-friendly accommodation
         RequirementSelectCard(
             title = "Child-friendly accommodation",
-            subtitle = if (isChildAutoSelected) {
-                "Automatically required (group includes $childrenCount child/children)"
+            subtitle = if (hasChildren) {
+                "Automatically required (group includes ${formatChildren(childrenCount)})"
             } else {
-                "Cribs, family privacy rooms, and pediatric aid"
+                "Not required (0 children in group)"
             },
             icon = Icons.Default.ChildCare,
-            checked = effectiveChildSelected,
+            checked = hasChildren,
             onCheckedChange = {
-                // If children > 0, child requirement cannot be deselected
-                if (!isChildAutoSelected) {
+                if (hasChildren) {
                     onToggleChildFriendly(it)
                 }
             },
-            enabled = !isChildAutoSelected,
+            enabled = false,
             testTag = "requirement_child_friendly"
         )
 

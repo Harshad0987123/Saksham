@@ -1,12 +1,13 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Menu
@@ -44,8 +45,8 @@ sealed class BottomNavItem(
     object Requests : BottomNavItem(
         route = SakshamDestinations.REQUESTS,
         title = "Requests",
-        selectedIcon = Icons.Filled.Assignment,
-        unselectedIcon = Icons.Outlined.Assignment,
+        selectedIcon = Icons.AutoMirrored.Filled.Assignment,
+        unselectedIcon = Icons.AutoMirrored.Outlined.Assignment,
         testTag = "nav_item_requests"
     )
 
@@ -80,7 +81,8 @@ fun SakshamBottomNavigation(
 
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        tonalElevation = 8.dp,
+        modifier = Modifier.navigationBarsPadding()
     ) {
         items.forEach { item ->
             val isSelected = when (item.route) {

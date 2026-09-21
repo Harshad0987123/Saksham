@@ -17,14 +17,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Accessible
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.NightShelter
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -188,7 +188,7 @@ fun PlacementRequestScreen(
 
                 // Wheelchair: Required / Not Required
                 PlacementReviewRow(
-                    icon = Icons.Default.Accessible,
+                    icon = Icons.AutoMirrored.Filled.Accessible,
                     label = "Wheelchair",
                     value = if (needs.wheelchairRequired) "Required" else "Not Required"
                 )
@@ -287,7 +287,7 @@ fun PlacementRequestScreen(
                 .testTag("send_placement_request_btn")
         ) {
             Icon(
-                imageVector = Icons.Default.Send,
+                imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(18.dp)

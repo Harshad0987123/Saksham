@@ -24,7 +24,10 @@ interface SakshamDao {
 
     @Query("""
         SELECT * FROM shelters 
-        WHERE available_beds > 0 
+        WHERE verification_status = 'approved'
+          AND verified = 1
+          AND availability_status = 'available'
+          AND available_beds > 0 
           AND (:needsChild = 0 OR accepts_children = 1)
           AND (:needsWheelchair = 0 OR accepts_wheelchair = 1)
         ORDER BY travel_time_minutes ASC
@@ -39,6 +42,12 @@ interface SakshamDao {
 
     @Query("UPDATE shelters SET available_beds = :beds, last_updated = :updatedAt WHERE id = :id")
     suspend fun updateShelterBeds(id: Long, beds: Int, updatedAt: Long)
+
+    @Query("UPDATE shelters SET verification_status = :status, verified = :verified, rejection_reason = :rejectionReason, last_updated = :updatedAt WHERE id = :id")
+    suspend fun updateShelterVerification(id: Long, status: String, verified: Boolean, rejectionReason: String?, updatedAt: Long)
+
+    @Query("SELECT * FROM shelters WHERE verification_status = :status ORDER BY created_at DESC")
+    fun getSheltersByVerificationStatus(status: String): Flow<List<Shelter>>
 
     @Query("SELECT COUNT(*) FROM shelters")
     suspend fun getShelterCount(): Int

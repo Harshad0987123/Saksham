@@ -2,8 +2,6 @@ package com.example.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +27,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.data.model.Shelter
 import com.example.ui.components.SakshamBottomNavigation
+import com.example.ui.screens.admin.AdminDashboardScreen
+import com.example.ui.screens.admin.AdminLoginScreen
+import com.example.ui.screens.admin.AdminShelterReviewScreen
 import com.example.ui.screens.auth.LoginScreen
 import com.example.ui.screens.auth.RegisterScreen
 import com.example.ui.screens.more.AboutScreen
@@ -60,6 +62,7 @@ import com.example.ui.viewmodel.SakshamViewModel
 
 object SakshamDestinations {
     const val LOGIN = "login"
+    const val ADMIN_LOGIN = "admin_login"
     const val REGISTER = "register"
     const val HOME = "home"
     const val FIND_SHELTER_STEP_1 = "find_shelter_step_1"
@@ -113,6 +116,7 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
     val staffSelectedShelterId by viewModel.staffSelectedShelterId.collectAsState()
 
     var showLeaveConfirmationDialog by remember { mutableStateOf(false) }
+    var adminReviewShelter by remember { mutableStateOf<Shelter?>(null) }
 
     val isBookingFlow = currentRoute in listOf(
         SakshamDestinations.FIND_SHELTER_STEP_1,
@@ -126,7 +130,8 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
     val showBottomBar = currentRole == AppRole.SURVIVOR &&
             currentRoute != null &&
             currentRoute != SakshamDestinations.LOGIN &&
-            currentRoute != SakshamDestinations.REGISTER
+            currentRoute != SakshamDestinations.REGISTER &&
+            currentRoute != SakshamDestinations.ADMIN_LOGIN
 
     if (showLeaveConfirmationDialog) {
         AlertDialog(
@@ -222,6 +227,26 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                                 },
                                 onEmergencyClick = {
                                     navController.navigate(SakshamDestinations.EMERGENCY)
+                                },
+                                onNavigateToAdminLogin = {
+                                    navController.navigate(SakshamDestinations.ADMIN_LOGIN)
+                                }
+                            )
+                        }
+
+                        // 1b. Auth: Admin Login
+                        composable(SakshamDestinations.ADMIN_LOGIN) {
+                            AdminLoginScreen(
+                                onAdminLoginSuccess = { contact, pass ->
+                                    viewModel.loginAdmin(
+                                        contact = contact,
+                                        pass = pass,
+                                        onSuccess = {},
+                                        onError = {}
+                                    )
+                                },
+                                onBackToUserLogin = {
+                                    navController.popBackStack()
                                 }
                             )
                         }
@@ -248,6 +273,7 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                                 unreadNotificationCount = notifications.size,
                                 activeRequest = activePlacementRequest,
                                 onFindShelterClick = {
+                                    viewModel.resetNeeds()
                                     navController.navigate(SakshamDestinations.FIND_SHELTER_STEP_1)
                                 },
                                 onViewStatusClick = { reqId ->
@@ -298,7 +324,7 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                                 onToggleChildFriendly = { viewModel.toggleChildRequirement(it) },
                                 onTransportChange = { viewModel.setTransportRequired(it) },
                                 onContinueClick = {
-                                    navController.navigate(SakshamDestinations.SHELTER_RESULTS)
+                                    navController.navigate(SakshamDestinations.FIND_SHELTER_STEP_3)
                                 },
                                 onBackClick = { navController.popBackStack() }
                             )
@@ -608,8 +634,45 @@ fun SakshamApp(viewModel: SakshamViewModel = viewModel()) {
                         }
                     )
                 }
+
+                AppRole.ADMIN -> {
+                    val reviewShelter = adminReviewShelter
+                    if (reviewShelter != null) {
+                        val currentReviewShelter = allSheltersRaw.find { it.id == reviewShelter.id } ?: reviewShelter
+                        AdminShelterReviewScreen(
+                            shelter = currentReviewShelter,
+                            onApproveShelter = { id, callback ->
+                                viewModel.approveShelter(id, callback)
+                            },
+                            onRejectShelter = { id, reason, callback ->
+                                viewModel.rejectShelter(id, reason, callback)
+                            },
+                            onBackClick = {
+                                adminReviewShelter = null
+                            }
+                        )
+                    } else {
+                        AdminDashboardScreen(
+                            shelters = allSheltersRaw,
+                            onReviewShelter = { shelter ->
+                                adminReviewShelter = shelter
+                            },
+                            onLogout = {
+                                viewModel.logout()
+                                navController.navigate(SakshamDestinations.LOGIN) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            },
+                            onSwitchRoleToSurvivor = {
+                                viewModel.setRole(AppRole.SURVIVOR)
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
 }
+
+

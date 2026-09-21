@@ -17,13 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Accessible
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
@@ -235,7 +235,7 @@ fun MyAccountScreen(
                     PreferenceToggleRow(
                         title = "Wheelchair Accessibility",
                         subtitle = "Prioritize shelters and vehicles with ramps",
-                        icon = Icons.Default.Accessible,
+                        icon = Icons.AutoMirrored.Filled.Accessible,
                         checked = wheelchairPref,
                         onCheckedChange = {
                             wheelchairPref = it
@@ -363,7 +363,7 @@ fun MyAccountScreen(
                     .height(48.dp)
                     .testTag("account_logout_button")
             ) {
-                Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Log Out", fontWeight = FontWeight.Bold)
             }

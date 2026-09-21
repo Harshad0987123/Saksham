@@ -22,14 +22,37 @@ data class Shelter(
     @ColumnInfo(name = "accepts_wheelchair")
     val acceptsWheelchair: Boolean,
     val status: String = "OPEN",
+    @ColumnInfo(name = "verification_status", defaultValue = "'approved'")
+    val verificationStatus: String = "approved", // "pending", "approved", "rejected"
+    @ColumnInfo(name = "verified", defaultValue = "1")
+    val verified: Boolean = true,
+    @ColumnInfo(name = "availability_status", defaultValue = "'available'")
+    val availabilityStatus: String = "available", // "available", "unavailable"
     @ColumnInfo(name = "travel_time_minutes")
-    val travelTimeMinutes: Int,
+    val travelTimeMinutes: Int = 15,
     @ColumnInfo(name = "last_updated")
     val lastUpdated: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "created_at", defaultValue = "0")
+    val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "rejection_reason")
+    val rejectionReason: String? = null,
+    @ColumnInfo(name = "verification_notes")
+    val verificationNotes: String = "NGO Registration & Safety Compliance Verified",
     val features: String = "Trauma-informed staff, 24/7 Security, Emergency essentials",
     @ColumnInfo(name = "staff_contact")
     val staffContact: String = "Staff On-Duty Helpline"
-)
+) {
+    val capacity: Int get() = totalBeds
+    val available: Int get() = availableBeds
+    val accepts_children: Boolean get() = acceptsChildren
+    val wheelchair_accessible: Boolean get() = acceptsWheelchair
+    val verification_status: String get() = verificationStatus
+    val availability_status: String get() = availabilityStatus
+    val rejection_reason: String? get() = rejectionReason
+    val last_updated: Long get() = lastUpdated
+    val created_at: Long get() = createdAt
+}
+
 
 /**
  * Transport Provider entity matching Table 2 of Saksham PRD
@@ -168,11 +191,27 @@ data class SurvivorNeeds(
         get() = adults + children
 
     val childrenRequired: Boolean
-        get() = children > 0 || needsChildren
+        get() = children > 0
 
     val wheelchairRequired: Boolean
         get() = needsWheelchair
 }
+
+/**
+ * Dynamic grammar helpers for people counts (Section 8)
+ */
+fun formatTotalPeople(count: Int): String =
+    if (count == 1) "1 person" else "$count people"
+
+fun formatAdults(count: Int): String =
+    if (count == 1) "1 adult" else "$count adults"
+
+fun formatChildren(count: Int): String =
+    if (count == 1) "1 child" else "$count children"
+
+fun formatPeopleCount(total: Int, adults: Int, children: Int): String =
+    "${formatTotalPeople(total)} (${formatAdults(adults)}, ${formatChildren(children)})"
+
 
 /**
  * Freshness status calculation based on PRD Section 13

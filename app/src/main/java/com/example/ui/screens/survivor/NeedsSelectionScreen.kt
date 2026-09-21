@@ -18,8 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -39,6 +39,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -148,7 +149,7 @@ fun NeedsSelectionScreen(
         UserTypeOptionCard(
             title = "Person Using Wheelchair",
             description = "Step-free entry, accessible bed & bathroom",
-            icon = Icons.Default.Accessible,
+            icon = Icons.AutoMirrored.Filled.Accessible,
             isSelected = needs.userType == "Person using wheelchair",
             onClick = { onUserTypeSelected("Person using wheelchair") }
         )
@@ -301,7 +302,7 @@ fun NeedsSelectionScreen(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = areaExpanded) },
                 leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = TealPrimary) },
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                     .fillMaxWidth()
                     .testTag("area_dropdown")
             )

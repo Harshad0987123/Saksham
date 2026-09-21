@@ -20,11 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Emergency
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
@@ -199,7 +199,7 @@ fun MoreScreen(
                 MoreMenuItem(
                     title = "Help & Support",
                     subtitle = "Frequently asked questions and guides",
-                    icon = Icons.Default.HelpOutline,
+                    icon = Icons.AutoMirrored.Filled.HelpOutline,
                     iconTint = TealPrimary,
                     onClick = onNavigateToHelp,
                     testTag = "more_item_help"
@@ -247,7 +247,7 @@ fun MoreScreen(
                 MoreMenuItem(
                     title = "Log Out",
                     subtitle = "End session and clear anonymous state",
-                    icon = Icons.Default.Logout,
+                    icon = Icons.AutoMirrored.Filled.Logout,
                     iconTint = MaterialTheme.colorScheme.error,
                     textColor = MaterialTheme.colorScheme.error,
                     onClick = onLogoutClick,

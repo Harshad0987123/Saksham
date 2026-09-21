@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PlacementRequest
 import com.example.data.model.TransportRequest
+import com.example.data.model.formatPeopleCount
 import com.example.ui.components.PrivacyBanner
 import com.example.ui.theme.EmergencyContainer
 import com.example.ui.theme.FreshGreen
@@ -386,7 +387,7 @@ fun RequestStatusScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${request.totalPeople} ${if (request.totalPeople == 1) "person" else "people"} (${request.adults} adults, ${request.children} children)",
+                        text = formatPeopleCount(request.totalPeople, request.adults, request.children),
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -482,7 +483,7 @@ fun RequestStatusScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Group details
-                    TransportInfoRow("Passengers", "${transportRequest.passengers} (${transportRequest.adults} adults, ${transportRequest.children} children)")
+                    TransportInfoRow("Passengers", formatPeopleCount(transportRequest.passengers, transportRequest.adults, transportRequest.children))
                     Spacer(modifier = Modifier.height(6.dp))
 
                     if (transportRequest.vehicleCapacity != null) {
@@ -572,7 +573,7 @@ fun RequestStatusScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.8.dp)
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    TransportInfoRow("Passengers", "${request.totalPeople} (${request.adults} adults, ${request.children} children)")
+                    TransportInfoRow("Passengers", formatPeopleCount(request.totalPeople, request.adults, request.children))
                     Spacer(modifier = Modifier.height(6.dp))
                     TransportInfoRow("Accessibility", if (request.wheelchairRequired) "Wheelchair accessible vehicle" else "Standard vehicle")
                     Spacer(modifier = Modifier.height(6.dp))

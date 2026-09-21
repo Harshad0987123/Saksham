@@ -1,8 +1,7 @@
-package com.example.ui.screens.auth
+package com.example.ui.screens.admin
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +19,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -34,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -57,22 +57,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.NavySecondary
+import com.example.ui.theme.TealContainer
 import com.example.ui.theme.TealPrimary
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(
-    onSignInSuccess: (String, String) -> Unit,
-    onNavigateToRegister: () -> Unit,
-    onEmergencyClick: () -> Unit,
-    onNavigateToAdminLogin: () -> Unit = {}
+fun AdminLoginScreen(
+    onAdminLoginSuccess: (String, String) -> Unit,
+    onBackToUserLogin: () -> Unit
 ) {
-    var identifier by remember { mutableStateOf("ananya.s@example.com") }
-    var password by remember { mutableStateOf("••••••••") }
+    var email by remember { mutableStateOf("admin@saksham.gov.in") }
+    var password by remember { mutableStateOf("admin123") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var showForgotPasswordDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -90,80 +87,92 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            // Back button to standard login
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackToUserLogin) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Back to User Portal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            // Logo & Brand
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Admin Badge & Shield
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(TealPrimary),
+                    .size(68.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(NavySecondary),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = "Saksham Logo",
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = "Admin Shield",
                     tint = Color.White,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(40.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "SAKSHAM",
+                text = "SAKSHAM ADMIN",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 2.sp
                 ),
-                color = MaterialTheme.colorScheme.primary
+                color = NavySecondary
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Welcome Back",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Text(
-                text = "Sign in to continue",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Shelter Verification Portal",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Login Card
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(22.dp)) {
                     Text(
-                        text = "Email or Phone",
+                        text = "Email",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
-                        value = identifier,
-                        onValueChange = { identifier = it },
-                        placeholder = { Text("Enter your email or phone") },
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = { Text("admin@saksham.gov.in") },
                         leadingIcon = {
-                            Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(Icons.Default.Email, contentDescription = null, tint = NavySecondary)
                         },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("login_identifier_input"),
+                            .testTag("admin_email_input"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
                     )
 
@@ -178,9 +187,9 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        placeholder = { Text("Enter your password") },
+                        placeholder = { Text("Enter admin password") },
                         leadingIcon = {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = NavySecondary)
                         },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -195,49 +204,37 @@ fun LoginScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("login_password_input"),
+                            .testTag("admin_password_input"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
-                            onSignInSuccess(identifier, password)
+                            if (email.isNotBlank()) onAdminLoginSuccess(email, password)
                         })
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // Forgot Password
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
-                        Text(
-                            text = "Forgot Password?",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .clickable {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Password reset link sent to your registered contact.")
-                                    }
-                                }
-                                .padding(vertical = 4.dp)
-                                .testTag("forgot_password_btn")
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Sign In Button
+                    // Login Button
                     Button(
-                        onClick = { onSignInSuccess(identifier, password) },
-                        colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
+                        onClick = {
+                            if (email.isNotBlank()) {
+                                onAdminLoginSuccess(email, password)
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Please enter admin email")
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NavySecondary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
-                            .testTag("sign_in_button")
+                            .testTag("admin_login_btn")
                     ) {
+                        Icon(Icons.Default.Security, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Sign In",
+                            text = "Login",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
@@ -245,61 +242,33 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Create Account Button
-                    OutlinedButton(
-                        onClick = onNavigateToRegister,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("create_account_button")
+                    // Demo Quick Fill Option for Judges/Evaluators
+                    Surface(
+                        color = TealContainer.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Create Account",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Demo Admin Account",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = NavySecondary
+                            )
+                            Text(
+                                text = "admin@saksham.gov.in",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Small Privacy Indicator (Section 22)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Privacy Protected: Only information needed for your request is used.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Admin Portal Access Link
-            Text(
-                text = "Staff & Admin Verification Portal →",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = NavySecondary
-                ),
-                modifier = Modifier
-                    .clickable(onClick = onNavigateToAdminLogin)
-                    .padding(8.dp)
-                    .testTag("admin_portal_link")
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(28.dp))
         }
 
         SnackbarHost(

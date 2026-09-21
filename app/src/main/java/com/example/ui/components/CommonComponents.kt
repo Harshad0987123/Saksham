@@ -145,6 +145,7 @@ fun SakshamTopAppBar(
                                         AppRole.SURVIVOR -> Icons.Default.Person
                                         AppRole.SHELTER_STAFF -> Icons.Default.NightShelter
                                         AppRole.TRANSPORT_PROVIDER -> Icons.Default.DirectionsCar
+                                        AppRole.ADMIN -> Icons.Default.Shield
                                     },
                                     contentDescription = "Switch Role",
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -155,6 +156,7 @@ fun SakshamTopAppBar(
                                         AppRole.SURVIVOR -> "Survivor"
                                         AppRole.SHELTER_STAFF -> "Shelter"
                                         AppRole.TRANSPORT_PROVIDER -> "Transport"
+                                        AppRole.ADMIN -> "Admin"
                                     },
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -223,6 +225,24 @@ fun SakshamTopAppBar(
                                 },
                                 onClick = {
                                     onRoleSelected(AppRole.TRANSPORT_PROVIDER)
+                                    showRoleMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            "Admin Dashboard",
+                                            fontWeight = if (currentRole == AppRole.ADMIN) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                        Text("Verify & approve shelters", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Shield, contentDescription = null, tint = NavySecondary)
+                                },
+                                onClick = {
+                                    onRoleSelected(AppRole.ADMIN)
                                     showRoleMenu = false
                                 }
                             )
